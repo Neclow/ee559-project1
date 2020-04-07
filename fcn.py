@@ -2,7 +2,7 @@ import torch
 from torch import nn
 
 class FCN(nn.Module):
-    def __init__(self, nLayers, nParams=70000, in_=14*14, out_=10):
+    def __init__(self, nLayers, nParams=70000, in_=14*14, out_=10, verbose=False):
         super(FCN, self).__init__()
         self.nLayers = nLayers
         self.nParams = nParams
@@ -10,10 +10,11 @@ class FCN(nn.Module):
         self.out_ = out_
         self.hidden = self.get_params(nLayers, nParams, in_, out_)
         
-        print(f'Width for {self.nParams} parameters in a {self.nLayers}-layer FCN: {self.hidden}')
-        
         self.fcn = self.create_net()
-        print(f'Parameters: {self.count_params()}')
+        
+        if verbose:
+            print(f'Width for {self.nParams} parameters in a {self.nLayers}-layer FCN: {self.hidden}')
+            print(f'Parameters: {self.count_params()}')
 
     def create_net(self):
         '''
@@ -38,7 +39,7 @@ class FCN(nn.Module):
         out = torch.zeros((x.shape[0], x.shape[1], self.out_))
         
         for i in range(x.shape[1]):
-            out[:,i,:] = self.fcn(x[:,i,:,:].view(-1, 14*14))
+            out[:,i,:] = self.fcn(x[:,i,:,:].flatten(start_dim=1))
         return out
     
     def count_params(self):
