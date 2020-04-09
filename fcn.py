@@ -2,7 +2,7 @@ import torch
 from torch import nn
 
 class FCN(nn.Module):
-    def __init__(self, nLayers, nParams=70000, in_=14*14, out_=10, verbose=False):
+    def __init__(self, nLayers, nParams=70000, in_=14*14, out_=10, verbose=True):
         super(FCN, self).__init__()
         self.nLayers = nLayers
         self.nParams = nParams
@@ -34,13 +34,16 @@ class FCN(nn.Module):
         layers.append(nn.Linear(self.hidden, self.out_))        
         return nn.Sequential(*layers)        
     
-    def forward(self, x):
-        assert(len(x.shape) == 4) # Input must be 4D
+    def forward(self, x1, x2):
+        return self.fcn(x1.flatten(start_dim=1)), self.fcn(x2.flatten(start_dim=1))
+        
+        
+        '''#assert(len(x.shape) == 4) # Input must be 4D
         out = torch.zeros((x.shape[0], x.shape[1], self.out_))
         
         for i in range(x.shape[1]):
             out[:,i,:] = self.fcn(x[:,i,:,:].flatten(start_dim=1))
-        return out
+        return out'''
     
     def count_params(self):
         return sum(p.numel() for p in self.parameters())
@@ -54,3 +57,5 @@ class FCN(nn.Module):
 
         s = pow(b**2-4*a*c, 0.5)
         return round((-b+s)/(2*a))
+    
+    
