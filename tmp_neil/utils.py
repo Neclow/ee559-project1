@@ -23,10 +23,16 @@ def load_data(N=1000):
 
     return train_data, test_data
 
-def split_data(train_data, test_data, split=800, batch_size=50): 
+def split_data(train_data, test_data, batch_size=50, split=800, seed=42): 
+    torch.manual_seed(seed)
+    idxs = torch.randperm(len(train_data))
+    
+    train_idxs = idxs[:split]
+    valid_idxs = idxs[split:]
+    
     # Prepare sampler for train-validation splitting
-    train_sampler = SubsetRandomSampler(range(split))
-    valid_sampler = SubsetRandomSampler(range(split, len(train_data)))
+    train_sampler = SubsetRandomSampler(train_idxs)
+    valid_sampler = SubsetRandomSampler(valid_idxs)
     
     # Load data in DataLoaders, split train set into train and valdiation sets
     train_loader = DataLoader(train_data, batch_size=batch_size, sampler=train_sampler)
