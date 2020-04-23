@@ -1,6 +1,7 @@
 import torch
 import time
 from torch import nn, optim
+from torch.optim import lr_scheduler
 from utils import split_data, shuffle, weight_initialization
 from metrics import compute_accuracy
 
@@ -8,6 +9,7 @@ def train(net, train_loader, valid_loader, eta=1e-3, decay=1e-5, n_epochs=25, al
     aux_crit = nn.CrossEntropyLoss()
     binary_crit = nn.BCELoss()
     optimizer = optim.Adam(net.parameters(), lr=eta, weight_decay=decay)
+    scheduler = lr_scheduler.ReduceLROnPlateau(optimizer, 'min')
 
     tr_losses, val_losses = torch.zeros(n_epochs), torch.zeros(n_epochs)
     
@@ -70,6 +72,7 @@ def trial(net, train_data, test_data, n_epochs=25, n_trials=30, alpha=1, alpha_d
     te_accuracies = torch.zeros(n_trials)
     for i in range(n_trials):
         # Shuffle data
+        torch.manual_seed(i)
         train_loader, valid_loader, test_loader = split_data(train_data, test_data, seed=i)
         
         # Reset weights

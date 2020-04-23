@@ -2,6 +2,7 @@ import dlc_practical_prologue as prologue
 import matplotlib.pyplot as plt
 import torch
 from torch import nn
+from torch.nn import init
 from torch.utils.data.sampler import SubsetRandomSampler
 from torch.utils.data import TensorDataset, DataLoader
 
@@ -23,7 +24,7 @@ def load_data(N=1000):
 
     return train_data, test_data
 
-def split_data(train_data, test_data, batch_size=50, split=800, seed=42): 
+def split_data(train_data, test_data, seed=42, batch_size=50, split=800): 
     torch.manual_seed(seed)
     idxs = torch.randperm(len(train_data))
     
@@ -37,7 +38,7 @@ def split_data(train_data, test_data, batch_size=50, split=800, seed=42):
     # Load data in DataLoaders, split train set into train and valdiation sets
     train_loader = DataLoader(train_data, batch_size=batch_size, sampler=train_sampler)
     valid_loader = DataLoader(train_data, batch_size=batch_size, sampler=valid_sampler)
-    test_loader = DataLoader(test_data, batch_size=batch_size, shuffle=True)
+    test_loader = DataLoader(test_data, batch_size=batch_size)
     
     return train_loader, valid_loader, test_loader
 
@@ -49,7 +50,8 @@ def shuffle(inputs, targets, classes):
 
 def weight_initialization(m):
     if isinstance(m, nn.Conv2d) or isinstance(m, nn.Linear):
-        m.reset_parameters()
+        init.kaiming_normal_(m.weight, nonlinearity='relu')
+        m.bias.data.fill_(0)
 
 
 def train_visualization(net, losses, accuracies, n_epochs):
