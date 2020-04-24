@@ -15,13 +15,13 @@ def load_data(N=1000, batch_size=50, seed=42):
     trainX, trainY, trainC, testX, testY, testC = prologue.generate_pair_sets(N, seed)
 
     mu, std = trainX.mean(), trainX.std()
-    
+
     trainX, testX = [standardize(x, mu, std) for x in [trainX, testX]]
-    
+
     # Assemble all data
     train_data = TensorDataset(trainX, trainY, trainC)
     test_data = TensorDataset(testX, testY, testC)
-    
+
     torch.manual_seed(seed) # For reproducibility
     train_loader = DataLoader(train_data, batch_size=batch_size, shuffle=True)
     test_loader = DataLoader(test_data, batch_size=batch_size)
@@ -34,21 +34,24 @@ def weight_initialization(m):
 
 def train_visualization(net, tr_losses, tr_accuracies, te_accuracies):
     fig, axs = plt.subplots(1,2, figsize=(8,4))
-    
+
     n_epochs = len(tr_losses)
-    
+
     axs[0].plot(range(n_epochs), tr_losses, 'k--')
     #axs[0].set_label(['Train loss'])
     axs[0].set_xlabel('Epoch')
     axs[0].set_ylabel('Loss')
     axs[0].grid()
     #axs[0].set_title('%s' % (net._get_name()))
-    
+
     axs[1].plot(range(n_epochs), tr_accuracies, 'k--', label='train')
     axs[1].plot(range(n_epochs), te_accuracies, 'r--', label='test')
     axs[1].set_xlabel('Epoch')
     axs[1].set_ylabel('Accuracy')
     axs[1].grid()
     axs[1].legend()
-    
-    plt.tight_layout()
+
+    fig.suptitle(f'Model: {net._get_name()}')
+
+    fig.tight_layout(rect=[0, 0.03, 1, 0.95])
+    plt.show()
