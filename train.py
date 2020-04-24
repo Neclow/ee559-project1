@@ -1,72 +1,109 @@
 import torch
+import time
 from torch import nn, optim
-from metrics import compute_accuracy  
-from utils import train_visualization, weight_initialization, shuffle
+from torch.optim import lr_scheduler
+from utils import load_data, weight_initialization
+from metrics import compute_accuracy
 
+def train(net, train_loader, test_loader=None, eta=1e-3, decay=1e-5, 
+          n_epochs=25, alpha=1, alpha_decay=1, verbose=False, plotting=False):
+    aux_crit = nn.CrossEntropyLoss()
+    binary_crit = nn.BCELoss()
+    optimizer = optim.Adam(net.parameters(), lr=eta, weight_decay=decay)
+    #scheduler = lr_scheduler.ReduceLROnPlateau(optimizer, 'min', patience=3)
 
-def train(net, train_input, train_target, train_classes, eta=1e-3, n_epochs=25, batch_size=100, verbose=True):
-    criterion = nn.CrossEntropyLoss()
-    optimizer = optim.Adam(net.parameters(), lr=eta, weight_decay=1e-5)
-    
-    losses, accuracies = [], []
+    tr_losses = torch.zeros(n_epochs)
+    tr_accuracies = torch.zeros(n_epochs)
+    te_accuracies = torch.zeros(n_epochs)
     
     for e in range(n_epochs):
-        sum_loss = 0
+        # Reset training/validation loss
+        tr_loss, val_loss = 0, 0
+        
+        # Training mode
         net.train()
-        for b in range(0, train_input.size(0), batch_size):
-            trainX = train_input.narrow(0, b, batch_size)
-            trainC = train_classes.narrow(0, b, batch_size)
+        
+        for (trainX, trainY, trainC) in train_loader:
+            # Forward pass
+            out, aux = net(trainX)
             
-            x1, x2 = trainX[:,0,:,:], trainX[:,1,:,:]
-            c1, c2 = trainC[:,0], trainC[:,1]
-
-            out1, out2 = net(x1, x2)
-
-            loss1 = criterion(out1, c1)
-            loss2 = criterion(out2, c2)
+            # Binary classification loss
+            binary_loss = binary_crit(out, trainY.float())
             
-            loss = loss1 + loss2
-            sum_loss += loss.item()
+            # Separate outputs and target classes for each image
+            if aux is not None:
+                aux1, aux2 = aux.unbind(1)
+                c1, c2 = trainC.unbind(1)
+
+                # Auxiliary loss
+                aux_loss = aux_crit(aux1, c1) + aux_crit(aux2, c2)
+                
+                # Update total loss
+                total_loss = binary_loss + alpha*aux_loss
+            else:
+                # Total loss
+                total_loss = binary_loss
+            
+            tr_loss += total_loss.item()
            
+            # Backward pass
             optimizer.zero_grad()
-            loss.backward()
+            total_loss.backward()
             optimizer.step()
         
-        net.eval()
-        with torch.no_grad():
-            acc = compute_accuracy(net, train_input, train_target)
-        losses.append(sum_loss)
-        accuracies.append(acc)
+        # Collect accuracy data for later plotting
+        if plotting:
+            tr_accuracies[e] = compute_accuracy(net, train_loader)
+            te_accuracies[e] = compute_accuracy(net, test_loader)
+        
+        # Collect loss data
+        tr_losses[e] = tr_loss
+        
+        # Update auxiliary loss coefficient
+        alpha *= alpha_decay
+        
         if verbose:
-            print('Epoch %d/%d, Loss: %.3f, Accuracy: %.3f' % (e+1, n_epochs, sum_loss, acc))
-    
-    return losses, accuracies
+            print('Epoch %d/%d, Binary loss: %.3f, Auxiliary loss: %.3f' % 
+                  (e+1, n_epochs, binary_loss, aux_loss))
+        
+    return tr_losses, tr_accuracies, te_accuracies
 
-def trial(net, train_input, train_classes, train_target, test_input, test_target, n_trials=10):
-    all_losses = []
-    all_train_accuracies = []
-    all_test_accuracies = []
+
+def trial(net, n_epochs=25, n_trials=30, alpha=0, alpha_decay=1, verbose=False):
+    all_losses = torch.zeros((n_trials, n_epochs))
+    tr_accuracies = torch.zeros(n_trials)
+    te_accuracies = torch.zeros(n_trials)
     for i in range(n_trials):
-        print(f'Trial {i+1}/{n_trials}...')
         # Shuffle data
-        train_input, train_target, train_classes = shuffle(train_input, train_target, train_classes)
+        torch.manual_seed(i)
+        train_loader, test_loader = load_data(seed=i)
         
         # Reset weights
         net.train()
         net.apply(weight_initialization)
         
         # Train
-        train_loss, train_acc = train(net, train_input, train_target, train_classes, verbose=False)
+        start = time.time()
+        tr_loss = train(net, train_loader, alpha=alpha, alpha_decay=alpha_decay)[0]
+        print('Trial %d/%d... Training time: %.2f s' % (i+1, n_trials, time.time()-start))
         
         # Collect data
-        all_losses.append(train_loss)
-        all_train_accuracies.append(train_acc)
-        net.eval()
-        with torch.no_grad():
-            test_acc = compute_accuracy(net, test_input, test_target)
-            all_test_accuracies.append(test_acc)
+        all_losses[i] = tr_loss
         
-        print('Loss: %.3f, Train accuracy: %.3f, Test_accuracy: %.3f' % (train_loss[-1], train_acc[-1], test_acc))
+        # Compute train and test accuracy
+        net.eval() # Dropout layers will work in eval mode
+        with torch.no_grad():
+            tr_accuracies[i] = compute_accuracy(net, train_loader)
+            te_accuracies[i] = compute_accuracy(net, test_loader)
+        
+        if verbose:
+            print('Loss: %.4f, Train acc: %.4f, Test acc: %.4f' % 
+                  (train_loss[-1], tr_accuracies[i], te_accuracies[i]))
+            
+    # Print trial results        
+    print('Train accuracy - mean: %.4f, std: %.4f, median: %.4f' %
+         (tr_accuracies.mean(), tr_accuracies.std(), tr_accuracies.median()))
+    print('Test accuracy - mean: %.4f, std: %.4f, median: %.4f' % 
+         (te_accuracies.mean(), te_accuracies.std(), te_accuracies.median()))
     
-    return torch.FloatTensor(all_losses), torch.FloatTensor(all_train_accuracies), torch.FloatTensor(all_test_accuracies)
-    
+    return all_losses, tr_accuracies, te_accuracies

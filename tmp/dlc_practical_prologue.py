@@ -114,8 +114,7 @@ def load_data(cifar = None, one_hot_labels = False, normalize = False, flatten =
 
 ######################################################################
 
-def mnist_to_pairs(nb, input, target, seed):
-    torch.manual_seed(seed)
+def mnist_to_pairs(nb, input, target):
     input = torch.functional.F.avg_pool2d(input, kernel_size = 2)
     a = torch.randperm(input.size(0))
     a = a[:2 * nb].view(nb, 2)
@@ -126,7 +125,7 @@ def mnist_to_pairs(nb, input, target, seed):
 
 ######################################################################
 
-def generate_pair_sets(nb, seed):
+def generate_pair_sets(nb):
     if args.data_dir is not None:
         data_dir = args.data_dir
     else:
@@ -142,7 +141,7 @@ def generate_pair_sets(nb, seed):
     test_input = test_set.data.view(-1, 1, 28, 28).float()
     test_target = test_set.targets
 
-    return mnist_to_pairs(nb, train_input, train_target, seed) + \
-           mnist_to_pairs(nb, test_input, test_target, seed)
+    return mnist_to_pairs(nb, train_input, train_target) + \
+           mnist_to_pairs(nb, test_input, test_target)
 
 ######################################################################

@@ -1,8 +1,12 @@
 import torch
 
-def compute_accuracy(net, test_input, test_target):
-    t1, t2 = test_input[:,0,:,:], test_input[:,1,:,:]
-
+def compute_accuracy(net, data_loader):
+    acc = 0
+    total = 0.
+    net.eval()
     with torch.no_grad():
-        out1, out2 = net(t1, t2)
-    return ((out1.argmax(1) <= out2.argmax(1)) == test_target).sum().numpy()/len(test_target)
+        for (X, y, _) in data_loader:
+            out, _ = net(X)
+            acc += ((out > 0.5) == y).float().sum().item()
+            total += len(y)
+    return acc/total
