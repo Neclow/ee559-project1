@@ -35,17 +35,18 @@ def weight_initialization(m):
 def train_visualization(net, tr_losses, tr_accuracies, te_accuracies):
     fig, axs = plt.subplots(1,2, figsize=(8,4))
 
-    n_epochs = len(tr_losses)
+    n_epochs = len(tr_losses)   
+    xdata = range(1, n_epochs+1)
 
-    axs[0].plot(range(n_epochs), tr_losses, 'k--')
+    axs[0].plot(xdata, tr_losses, 'k--')
     #axs[0].set_label(['Train loss'])
     axs[0].set_xlabel('Epoch')
     axs[0].set_ylabel('Loss')
     axs[0].grid()
     #axs[0].set_title('%s' % (net._get_name()))
 
-    axs[1].plot(range(n_epochs), tr_accuracies, 'k--', label='train')
-    axs[1].plot(range(n_epochs), te_accuracies, 'r--', label='test')
+    axs[1].plot(xdata, tr_accuracies, 'k--', label='train')
+    axs[1].plot(xdata, te_accuracies, 'r--', label='test')
     axs[1].set_xlabel('Epoch')
     axs[1].set_ylabel('Accuracy')
     axs[1].grid()
@@ -53,5 +54,9 @@ def train_visualization(net, tr_losses, tr_accuracies, te_accuracies):
 
     fig.suptitle(f'Model: {net._get_name()}')
 
-    fig.tight_layout(rect=[0, 0.03, 1, 0.95])
-    plt.show()
+    #fig.tight_layout(rect=[0, 0.03, 1, 0.95])
+    #plt.show()
+    
+    fname = 'train_visualization.png'
+    plt.savefig(fname)
+    print(f'Plot saved under {fname}')

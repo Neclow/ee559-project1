@@ -21,14 +21,14 @@ def run_train(model, alpha, alpha_decay, plotting=False, verbose=True, seed=14):
     start = time.time()
     tr_loss, tr_acc, te_acc = train(model, train_loader, test_loader, alpha=alpha,
                                     alpha_decay=alpha_decay, verbose=verbose, plotting=plotting)
-    print('Training ended. Training time: %.2f s \n' % (time.time()-start))
+    print('\n Training ended. Training time: %.2f s \n' % (time.time()-start))
 
     # Visualize data if plotting
     # Else, compute final train and test accuracy
     if plotting:
         final_train_accuracy = tr_acc[-1]
         final_test_accuracy = te_acc[-1]
-        train_visualization(best_model, tr_loss, tr_acc, te_acc)
+        train_visualization(model, tr_loss, tr_acc, te_acc)
     else:
         final_train_accuracy = compute_accuracy(model, train_loader)
         final_test_accuracy = compute_accuracy(model, test_loader)
@@ -53,6 +53,7 @@ def run(model, alpha, alpha_decay, mode='train', plotting=False, n_trials=10):
 
     if mode == 'train':
         print('Running: single training.')
+        print(f'Plotting mode: {plotting}')
         time.sleep(2)
         run_train(model, alpha, alpha_decay, plotting=plotting)
     elif mode == "trial":
@@ -65,7 +66,7 @@ def main():
     best_model = SiameseCNN(mode='dropout', verbose=False)
     best_alpha = 1
     best_alpha_decay = 1
-    run(model=best_model, alpha=best_alpha, alpha_decay=best_alpha_decay, mode='train')
+    run(model=best_model, alpha=best_alpha, alpha_decay=best_alpha_decay, mode='train', plotting=False)
 
 if __name__ == "__main__":
     main()

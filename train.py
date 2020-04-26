@@ -40,7 +40,7 @@ def train(net, train_loader, test_loader=None, eta=1e-3, decay=1e-5,
             else:
                 # Total loss
                 aux_loss = 0
-            total_loss = binary_loss + aux_loss
+            total_loss = binary_loss + alpha*aux_loss
             tr_loss += total_loss.item()
 
             # Backward pass
