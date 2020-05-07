@@ -19,16 +19,14 @@ def run_train(model, alpha, alpha_decay, plotting=False, verbose=True, seed=14):
 
     # Train model
     start = time.time()
-    tr_loss, tr_acc, te_acc = train(model, train_loader, test_loader, alpha=alpha,
+    tr_loss, tr_acc = train(model, train_loader, alpha=alpha,
                                     alpha_decay=alpha_decay, verbose=verbose, plotting=plotting)
     print('\n Training ended. Training time: %.2f s \n' % (time.time()-start))
 
     # Visualize data if plotting
     # Else, compute final train and test accuracy
     if plotting:
-        final_train_accuracy = tr_acc[-1]
-        final_test_accuracy = te_acc[-1]
-        train_visualization(model, tr_loss, tr_acc, te_acc)
+        train_visualization(model, tr_loss, tr_acc)
     else:
         final_train_accuracy = compute_accuracy(model, train_loader)
         final_test_accuracy = compute_accuracy(model, test_loader)

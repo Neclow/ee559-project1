@@ -5,8 +5,8 @@ from torch.optim import lr_scheduler
 from utils import load_data, weight_initialization
 from metrics import compute_accuracy
 
-def train(net, train_loader, test_loader=None, eta=1e-3, decay=1e-5,
-          n_epochs=25, alpha=1, alpha_decay=1, verbose=False, plotting=False):
+def train(net, train_loader, n_epochs=25, eta=1e-3, decay=1e-5,
+          alpha=1, alpha_decay=1, verbose=False, plotting=False):
     aux_crit = nn.CrossEntropyLoss()
     binary_crit = nn.BCELoss()
     optimizer = optim.Adam(net.parameters(), lr=eta, weight_decay=decay)
@@ -14,7 +14,6 @@ def train(net, train_loader, test_loader=None, eta=1e-3, decay=1e-5,
 
     tr_losses = torch.zeros(n_epochs)
     tr_accuracies = torch.zeros(n_epochs)
-    te_accuracies = torch.zeros(n_epochs)
 
     for e in range(n_epochs):
         # Reset training/validation loss
@@ -51,7 +50,6 @@ def train(net, train_loader, test_loader=None, eta=1e-3, decay=1e-5,
         # Collect accuracy data for later plotting
         if plotting:
             tr_accuracies[e] = compute_accuracy(net, train_loader)
-            te_accuracies[e] = compute_accuracy(net, test_loader)
 
         # Collect loss data
         tr_losses[e] = tr_loss
@@ -63,16 +61,44 @@ def train(net, train_loader, test_loader=None, eta=1e-3, decay=1e-5,
             print('Epoch %d/%d, Binary loss: %.3f, Auxiliary loss: %.3f' %
                   (e+1, n_epochs, binary_loss, aux_loss))
 
-    return tr_losses, tr_accuracies, te_accuracies
+    return tr_losses, tr_accuracies
 
 
-def trial(net, n_trials=30, n_epochs=25, alpha=0, alpha_decay=1, verbose=False):
+def hyperparam_opt(net):
+    # Hyperparameter optimization through grid search
+    # Hyperparameters: eta, decay, alpha
+    etas = [1e-2, 5e-3, 1e-3, 5e-4, 1e-4]
+    decays = [1e-1, 1e-2, 1e-3, 1e-4, 1e-5]
+    
+    HP_res = {'config': [], 'tr_accuracy': [], 'te_accuracy':[]}
+    
+    # No alpha hyperparam optimization for non-Siamese networks
+    if str.find(net._get_name(), 'Siamese') < 0:
+        alphas = [0]
+    else:
+        alphas = [0, 0.5, 1]
+    
+    for eta in etas:
+        for decay in decays:
+            for alpha in alphas:
+                print(f'Hyperparameters: eta={eta}, decay={decay}, alpha={alpha} \n')
+                _, tr_accuracies, te_accuracies = trial(net, n_trials=3, eta=eta, decay=decay,
+                                                                alpha=alpha, start_seed=1000, verbose=False)
+                HP_res['config'].append([eta, decay, alpha])
+                HP_res['tr_accuracy'].append(tr_accuracies)
+                HP_res['te_accuracy'].append(te_accuracies)
+                
+                print()
+    return HP_res
+                
+
+def trial(net, n_trials=30, n_epochs=25, eta=1e-3, decay=1e-5, alpha=0, alpha_decay=1, start_seed=0, verbose=False):
     all_losses = torch.zeros((n_trials, n_epochs))
     tr_accuracies = torch.zeros(n_trials)
     te_accuracies = torch.zeros(n_trials)
     for i in range(n_trials):
         # Shuffle data
-        torch.manual_seed(i)
+        torch.manual_seed(start_seed+i)
         train_loader, test_loader = load_data(seed=i)
 
         # Reset weights
@@ -81,7 +107,8 @@ def trial(net, n_trials=30, n_epochs=25, alpha=0, alpha_decay=1, verbose=False):
 
         # Train
         start = time.time()
-        tr_loss = train(net, train_loader, n_epochs=n_epochs, alpha=alpha, alpha_decay=alpha_decay)[0]
+        tr_loss, _ = train(net, train_loader, n_epochs=n_epochs, eta=eta, decay=decay,
+                           alpha=alpha, alpha_decay=alpha_decay)
         print('Trial %d/%d... Training time: %.2f s' % (i+1, n_trials, time.time()-start))
 
         # Collect data
@@ -95,7 +122,7 @@ def trial(net, n_trials=30, n_epochs=25, alpha=0, alpha_decay=1, verbose=False):
 
         if verbose:
             print('Loss: %.4f, Train acc: %.4f, Test acc: %.4f' %
-                  (train_loss[-1], tr_accuracies[i], te_accuracies[i]))
+                  (tr_loss[-1], tr_accuracies[i], te_accuracies[i]))
 
     # Print trial results
     print('Train accuracy - mean: %.4f, std: %.4f, median: %.4f' %
