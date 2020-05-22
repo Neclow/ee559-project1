@@ -29,7 +29,7 @@ def run_train(model, alpha, eta, decay, plotting=False, verbose=True, seed=14):
     seed
         Random seed (for reproducibility)
     '''
-    
+
     # Generate data
     torch.manual_seed(seed) # For reproducbility
     train_loader, test_loader = load_data(seed=seed)
@@ -41,11 +41,11 @@ def run_train(model, alpha, eta, decay, plotting=False, verbose=True, seed=14):
     # Train model
     start = time.time()
     tr_loss, tr_acc = train(model, train_loader, alpha=alpha,
-                            eta=eta, decay=decay, 
+                            eta=eta, decay=decay,
                             verbose=verbose, plotting=plotting)
-    
+
     print('\n Training ended. Training time: %.2f s \n' % (time.time()-start))
-    
+
     model.eval() # Disable dropout layers for testing
     final_train_accuracy = compute_accuracy(model, train_loader)
     final_test_accuracy = compute_accuracy(model, test_loader)
@@ -76,14 +76,14 @@ def run(model, alpha, mode='train', plotting=False, n_trials=10):
     n_trials
         Number of trials to perform (if mode = 'trial')
     '''
-    
+
     print('Default run: single training with best model')
     print('In default run: for plotting, change "plotting" flag to True.')
     print('For full trial, select mode="trial". Default number of trials: 10.')
 
     if str.find(model._get_name(), 'Siamese') < 0:
         warnings.warn(f'Auxiliary loss is not implemented for model: {model._get_name()}', stacklevel=2)
-    
+
     # Load optimized hyperparameters for given framework
     config = load_hyperparam_config(model._get_name(), alpha)
     print(f'Auxiliary loss coefficient: {alpha}')
@@ -103,7 +103,7 @@ def run(model, alpha, mode='train', plotting=False, n_trials=10):
     else:
         raise ValueError('Running mode not found. Try "train" for simple train, "trial" for full trial.')
 
-        
+
 def load_hyperparam_config(name, alpha):
     '''
     Load optimized hyperparameters for given configuration.
@@ -145,14 +145,14 @@ def load_hyperparam_config(name, alpha):
             raise ValueError('Alpha value unknown. Alpha can be 0, 0.5 or 1.')
     else:
         raise ValueError('Model name not found. Available: "MLP", "CNN",\
-                         "SiameseCNN", "SiameseMLP".')        
-        
+                         "SiameseCNN", "SiameseMLP".')
+
 def main():
     best_model = SiameseCNN()
     best_alpha = 1
     mode = 'train'
     plotting = True
-    run(model=best_model, alpha=best_alpha, mode=mode, plotting=True)
+    run(model=best_model, alpha=best_alpha, mode=mode, plotting=plotting)
 
 if __name__ == "__main__":
     main()
