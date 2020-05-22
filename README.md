@@ -7,7 +7,7 @@ auxiliary loss to help the training of the main objective.
 To run the project: *Python test.py*
 
 Training time on the EPFL Deep Learning VM: 10-15 seconds per training with a CNN-based network, 2-3 s with a MLP-based network.
-(which gives trial times of about 2 min for CNN networks, and 30 s for MLP networks).
+(which gives trial times of about 2 min for CNN networks, and 30 s for MLP networks (for 10 trials)).
 
 In test.py, different modes can be executed: 'train' for a single training, 'trial' for a N-round trial.
 Within the 'train' mode, visualizing training loss/accuracy graphs can be done by setting the 'plotting' flag to True.
