@@ -1,5 +1,6 @@
 import torch
 
+
 def compute_accuracy(net, data_loader):
     '''
     Compute accuracy of the network on a dataset.
@@ -18,9 +19,9 @@ def compute_accuracy(net, data_loader):
     tensor
          The accuracy of the model.
     '''
-
-    acc = 0
-    total = 0.
+    
+    acc = 0.
+    total = 0
     net.eval()
     with torch.no_grad():
         for (X, y, _) in data_loader:

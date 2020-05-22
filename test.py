@@ -29,7 +29,7 @@ def run_train(model, alpha, eta, decay, plotting=False, verbose=True, seed=14):
     seed
         Random seed (for reproducibility)
     '''
-
+    
     # Generate data
     torch.manual_seed(seed) # For reproducbility
     train_loader, test_loader = load_data(seed=seed)
@@ -41,16 +41,18 @@ def run_train(model, alpha, eta, decay, plotting=False, verbose=True, seed=14):
     # Train model
     start = time.time()
     tr_loss, tr_acc = train(model, train_loader, alpha=alpha,
-                            eta=eta, decay=decay,
+                            eta=eta, decay=decay, 
                             verbose=verbose, plotting=plotting)
+    
     print('\n Training ended. Training time: %.2f s \n' % (time.time()-start))
-
-    # Visualize data if plotting
-    # Else, compute final train and test accuracy
-    if plotting:
-        train_visualization(model, tr_loss, tr_acc)
+    
+    model.eval() # Disable dropout layers for testing
     final_train_accuracy = compute_accuracy(model, train_loader)
     final_test_accuracy = compute_accuracy(model, test_loader)
+
+    # Visualize data if plotting
+    if plotting:
+        train_visualization(model, tr_loss, tr_acc, final_test_accuracy)
 
     print('Train accuracy: %.4f // Test accuracy: %.4f' %
          (final_train_accuracy, final_test_accuracy))
@@ -74,35 +76,34 @@ def run(model, alpha, mode='train', plotting=False, n_trials=10):
     n_trials
         Number of trials to perform (if mode = 'trial')
     '''
-
+    
     print('Default run: single training with best model')
-    print('In default run: for plotting, change flag "plotting" to True.')
+    print('In default run: for plotting, change "plotting" flag to True.')
     print('For full trial, select mode="trial". Default number of trials: 10.')
 
-    print(f'Model: {model._get_name()}')
-
-    # Auxiliary loss implementation is not possible for non-Siamese networks
     if str.find(model._get_name(), 'Siamese') < 0:
         warnings.warn(f'Auxiliary loss is not implemented for model: {model._get_name()}', stacklevel=2)
-
-    print(f'Auxiliary loss coefficient: {alpha}')
-
-    time.sleep(2)
-
+    
     # Load optimized hyperparameters for given framework
     config = load_hyperparam_config(model._get_name(), alpha)
+    print(f'Auxiliary loss coefficient: {alpha}')
+    print(f'Optimized learning rate: {config["eta"]}')
+    print(f'Optimized L2-regularization coefficient: {config["decay"]}')
+
+    time.sleep(2)
 
     if mode == 'train':
         print('Running: single training.')
         print(f'Plotting mode: {plotting}')
-        time.sleep(2)
-        run_train(model, alpha, eta=config['eta'], decay=config['decay'], plotting=plotting)
+        time.sleep(1)
+        run_train(model, alpha=alpha, eta=config['eta'], decay=config['decay'], plotting=plotting)
     elif mode == "trial":
         print(f'Running: {n_trials}-round trial.')
-        trial(model, n_trials=n_trials, eta=config['eta'], decay=config['decay'], alpha=alpha)
+        trial(model, alpha=alpha, eta=2.5e-3, decay=1e-3, n_trials=n_trials, verbose=True)
     else:
         raise ValueError('Running mode not found. Try "train" for simple train, "trial" for full trial.')
 
+        
 def load_hyperparam_config(name, alpha):
     '''
     Load optimized hyperparameters for given configuration.
@@ -144,12 +145,14 @@ def load_hyperparam_config(name, alpha):
             raise ValueError('Alpha value unknown. Alpha can be 0, 0.5 or 1.')
     else:
         raise ValueError('Model name not found. Available: "MLP", "CNN",\
-                         "SiameseCNN", "SiameseMLP".')
-
+                         "SiameseCNN", "SiameseMLP".')        
+        
 def main():
-    best_model = SiameseCNN(verbose=True)
+    best_model = SiameseCNN()
     best_alpha = 1
-    run(model=best_model, alpha=best_alpha, mode='train', plotting=False)
+    mode = 'train'
+    plotting = True
+    run(model=best_model, alpha=best_alpha, mode=mode, plotting=True)
 
 if __name__ == "__main__":
     main()
